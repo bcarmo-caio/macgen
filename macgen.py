@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 import sys
 
 import argparse
@@ -54,6 +55,16 @@ def read_OUIs_from_file(filename):
 
     return macs
 
+def treat_arg_file(args):
+    if not args.file:
+        args.file = os.path.dirname(__file__) + os.sep + 'manuf'
+    return args
+
+def treat_arg_count(args):
+    args.count = args.count % 16777216
+    if args.count == 0:
+        sys.exit(0)
+    return args
 
 def get_argparse():
     parser = argparse.ArgumentParser()
@@ -67,7 +78,7 @@ choose from a list of matched vendors.
 
     parser.add_argument('-f', '--file',
                         type=str,
-                        default='manuf',
+                        default=None,
                         help="""
 File holding a list of vendors.\t\t
 Format: OUI<TAB>vendor<TAB>full vendor info<TAB>comment.\t\t
@@ -120,9 +131,8 @@ Quantity of MACs to be generated. Truncated to 16.777.215.
 """)
 
     args = parser.parse_args()
-    args.count = args.count % 16777216
-    if args.count == 0:
-        sys.exit(0)
+    args = treat_arg_file(args)
+    args = treat_arg_count(args)
 
     return args
 
