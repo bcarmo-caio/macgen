@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import sys
+
 import argparse
 import secrets
 
@@ -110,7 +112,19 @@ Sets the maximum levenshtein distance allowed between desired input vendor and
 the vendors in input file. Defaults to 3.
 """)
 
-    return parser.parse_args()
+    parser.add_argument('-c', '--count',
+                        type=int,
+                        default=1,
+                        help="""
+Quantity of MACs to be generated. Truncated to 16.777.215.
+""")
+
+    args = parser.parse_args()
+    args.count = args.count % 16777216
+    if args.count == 0:
+        sys.exit(0)
+
+    return args
 
 
 def read_choice(max_allowed):
@@ -142,11 +156,12 @@ def main():
             choice = read_choice(i)
             mac = macs[choice]
 
-    output = ''
-    if args.print_vendor:
-        output += (mac.full_vendor_name or mac.vendor) + ': '
-    output += mac.generate_random_mac(args.separator)
-    print(output)
+    for _ in range(args.count):
+        output = ''
+        if args.print_vendor:
+            output += (mac.full_vendor_name or mac.vendor) + ': '
+        output += mac.generate_random_mac(args.separator)
+        print(output)
 
 
 if __name__ == '__main__':
