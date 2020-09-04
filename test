@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+import sys
+
+import re
+
+from macgen import read_OUIs_from_file
+from mac import MAC
+
+def test_load():
+    return read_OUIs_from_file('test_input_macs.txt')
+
+
+def test_find_mac_without_comments():
+    OUI = '00:22:22'
+    mac = MAC.find_by_OUI(OUI)
+    assert mac.OUI == OUI
+    assert mac.vendor == 'Schaffne'
+    assert mac.full_vendor_name == 'Schaffner Deutschland GmbH'
+    assert mac.comment is None
+    assert mac._OUI_as_list == OUI.split(':')
+
+
+def test_find_mac_with_comments():
+    OUI = '00:00:D1'
+    mac = MAC.find_by_OUI(OUI)
+    assert mac.OUI == OUI
+    assert mac.vendor == 'Adaptec'
+    assert mac.full_vendor_name == 'Adaptec, Inc.'
+    assert mac.comment == '# "Nodem" product'
+    assert mac._OUI_as_list == OUI.split(':')
+
+
+def test_find_mac_regardless_separator():
+    OUI = '00:00:D1'
+    mac = MAC.find_by_OUI(OUI)
+    assert mac.OUI == OUI
+
+    OUI = '00-22-22'
+    mac = MAC.find_by_OUI(OUI)
+    assert mac.OUI == OUI.replace('-', ':')
+
+
+def test_generate():
+    mac = macs[100]
+    generated_mac = mac.generate_random_mac(':')
+    assert re.match('([0-9A-F]{2}:){5}[0-9A-F]{2}', generated_mac) is not None
+    generated_mac = mac.generate_random_mac('-')
+    assert re.match('([0-9A-F]{2}-){5}[0-9A-F]{2}', generated_mac) is not None
+
+
+def test_print_leading_zeros():
+    debug = False
+    mac = macs[100]
+    for i in range(100): # usually less than 10 is enough. TODO improve this.
+        generated_mac = mac.generate_random_mac(':').split(':')
+        if generated_mac[3][0] == '0' or \
+           generated_mac[4][0] == '0' or \
+           generated_mac[5][0] == '0':
+
+           if(debug):
+               print(f'Generated leading zeros at try: {i}')
+           return
+    raise Exception('Could not detect weather print leading zeros')
+
+
+def test_find_mac_by_vendor_without_levenshtein():
+    vendor = 'intel'
+    macs = MAC._find_by_vendor_no_levenshtein(vendor)
+    assert len(macs) == 16
+    for mac in macs:
+        assert mac.vendor.lower() == vendor
+
+
+def test_find_mac_by_vendor_using_levenshtein():
+    vendor = 'inel' # wanted intel but had typo, so user input 'inel'
+    MAC.set_levenshtein_max_dist_allowed(1)
+    macs = MAC._find_by_vendor_levenshtein(vendor)
+    # Intel was wanted but got 19 in total, 16 Intel plus Inkel, Indel and Inet.
+    expected_vendors = ['Inkel',
+                        'Intel', 'Intel', 'Intel',
+                        'Indel',
+                        'Intel', 'Intel', 'Intel', 'Intel', 'Intel', 'Intel', 'Intel',
+                        'Inet',
+                        'Intel', 'Intel', 'Intel', 'Intel', 'Intel', 'Intel']
+    assert [m.vendor for m in macs] == expected_vendors
+
+def main():
+    global macs
+    macs = test_load()
+    MAC.set_macs(macs)
+    assert macs is not None
+    test_find_mac_without_comments()
+    test_find_mac_with_comments()
+    test_find_mac_regardless_separator()
+    test_generate()
+    test_print_leading_zeros()
+    test_find_mac_by_vendor_without_levenshtein()
+    test_find_mac_by_vendor_using_levenshtein()
+
+
+if __name__ == '__main__':
+    main()
+    sys.exit(0)
