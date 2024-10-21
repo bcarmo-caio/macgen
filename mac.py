@@ -18,7 +18,7 @@ try:
     from Levenshtein import distance as levenshtein_dist
 except ModuleNotFoundError:
     try:
-        from ilevenshtein_fallback import levenshtein_dist
+        from levenshtein_fallback import levenshtein_dist
     except ModuleNotFoundError:
         from levenshtein_fallback_for_real import levenshtein_dist
 
